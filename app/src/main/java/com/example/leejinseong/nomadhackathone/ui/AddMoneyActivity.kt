@@ -6,6 +6,7 @@ import android.support.v7.app.AppCompatActivity
 import android.text.TextUtils
 import android.view.View
 import android.widget.Toast
+import com.example.leejinseong.nomadhackathone.Dlog
 import com.example.leejinseong.nomadhackathone.R
 import io.realm.Realm
 import kotlinx.android.synthetic.main.activity_add_money.*
@@ -22,12 +23,16 @@ class AddMoneyActivity : AppCompatActivity() {
 
     val realm by lazy { Realm.getDefaultInstance() }
 
+    var perDay : Int? = 1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_money)
 
         if(null != intent) {
             val type = intent.getIntExtra("type", -1)
+
+            perDay = intent.getIntExtra("perDay", 1)
 
             //Dlog.d("type : " + type)
             if(type > 0) {
@@ -79,16 +84,38 @@ class AddMoneyActivity : AppCompatActivity() {
                 val now = System.currentTimeMillis()
                 val date = Date(now)
 
-                val sdf = SimpleDateFormat("yyyy/MM/dd")
+               /* val sdf = SimpleDateFormat("yyyy/MM/dd")
                 val nowTime = sdf.format(date)
 
                 val sdf2 = SimpleDateFormat("yyyy/MM/dd/HH/mm/ss")
-                val nowTime2 = sdf2.format(date)
+                val nowTime2 = sdf2.format(date)*/
+
+                val sdfY = SimpleDateFormat("yyyy")
+                val nowY = sdfY.format(date)
+
+                val sdfM = SimpleDateFormat("MM")
+                val nowM = sdfM.format(date)
+
+                val sdfD = SimpleDateFormat("dd")
+                val nowD = sdfD.format(date)
+
+                var nowTempD = nowD.toInt()
+
+                if(perDay != 1) {
+
+                    nowTempD += (perDay!! -1)
+
+                }
+
+                val sdfTime = SimpleDateFormat("HH/mm/ss")
+                val nowTime = sdfTime.format(date)
 
                 val money = realm.createObject(Money::class.java)
 
-                money.date1 = nowTime
-                money.date2 = nowTime2
+                Dlog.d("$nowY/$nowM/$nowTempD/$nowTime 에 데이터 저장")
+
+                money.date1 = "$nowY/$nowM/$nowTempD"
+                money.date2 = "$nowY/$nowM/$nowTempD/$nowTime"
                 money.money = etActivityAddMoney.text.toString()
 
             })

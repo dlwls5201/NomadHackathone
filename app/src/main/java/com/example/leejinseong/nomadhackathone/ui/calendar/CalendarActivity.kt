@@ -24,11 +24,11 @@ import kotlinx.android.synthetic.main.activity_main.*
  * Created by leejinseong on 2018. 3. 18..
  */
 
-class CalendarActivity : AppCompatActivity() {
+class CalendarActivity : AppCompatActivity() , CalendarAdapter.ItemClickListener {
 
     internal val realm by lazy { Realm.getDefaultInstance() }
 
-    internal val adapter by lazy { CalendarAdapter() }
+    internal val adapter by lazy { CalendarAdapter().apply { setItemClickListener(this@CalendarActivity) } }
 
     internal val datas by lazy {
 
@@ -96,10 +96,10 @@ class CalendarActivity : AppCompatActivity() {
 
             }
 
-            //Dlog.d("nowTime : $nowTime")
+            //Dlog.w("nowTime : $nowTime")
 
             val calendarDatas = realm.where(Money::class.java).equalTo("date1", nowTime).findAllSortedAsync("date2")
-            //Dlog.d("calendarDatas : $datas")
+            //Dlog.w("calendarDatas : $datas")
 
             val array: ArrayList<Money> = ArrayList()
 
@@ -111,5 +111,9 @@ class CalendarActivity : AppCompatActivity() {
 
         })
 
+    }
+
+    override fun onItemClick() {
+        Dlog.w("onItemClick")
     }
 }

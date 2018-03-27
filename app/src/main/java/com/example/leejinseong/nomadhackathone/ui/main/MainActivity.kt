@@ -2,6 +2,7 @@ package com.example.leejinseong.nomadhackathone.ui.main
 
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Movie
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.preference.PreferenceManager
@@ -13,7 +14,9 @@ import com.example.leejinseong.nomadhackathone.R
 import com.example.leejinseong.nomadhackathone.model.Money
 import com.example.leejinseong.nomadhackathone.ui.AddMoneyActivity
 import com.example.leejinseong.nomadhackathone.ui.calendar.CalendarActivity
+import io.realm.OrderedRealmCollection
 import io.realm.Realm
+import io.realm.RealmResults
 import kotlinx.android.synthetic.main.activity_main.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -29,7 +32,17 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
     }
 
-    internal var dialogMessage: String? = null
+    val now = System.currentTimeMillis()
+    val date = Date(now)
+
+    val sdfY = SimpleDateFormat("yyyy")
+    val nowY = sdfY.format(date)
+
+    val sdfM = SimpleDateFormat("MM")
+    val nowM = sdfM.format(date)
+
+    val sdfD = SimpleDateFormat("dd")
+    val nowD = sdfD.format(date)
 
     internal val adapter by lazy {
         MainAdapter().apply { setItemClickListener(this@MainActivity) }
@@ -39,17 +52,9 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
         Realm.getDefaultInstance()
     }
 
-    internal val datas by lazy {
-
-        val now = System.currentTimeMillis()
-        val date = Date(now)
-        val sdf = SimpleDateFormat("yyyy/MM/dd")
-        val nowTime = sdf.format(date)
-
-        realm.where(Money::class.java).equalTo("date1", nowTime).findAllSortedAsync("date2")
-    }
-
     internal var perDay = 1
+
+    internal lateinit var datas : RealmResults<Money>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,14 +74,14 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
     }
 
     override fun onItemClick() {
-        //showToast("itemClick")
+        showToast("itemClick")
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         //Dlog.d("requestCode : $requestCode , resultCode : $resultCode")
         if(resultCode == RESULT_CODE) {
-            initPerMoney()
+            initView()
         }
     }
 
@@ -86,32 +91,79 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
         tvActivityMainTitle.text = "$perDay 일 차"
 
-        initPerMoney()
-
         with(rvActivityMain) {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = this@MainActivity.adapter
         }
 
+        var nowTempD = nowD.toInt()
+
+        Dlog.d("initView perDay : " + perDay + " , nowTempD : " + nowTempD)
+
+        if(perDay > 1) {
+
+            nowTempD += (perDay - 1)
+
+            datas.removeAllChangeListeners()
+            datas = realm.where(Money::class.java).equalTo("date1", "$nowY/$nowM/$nowTempD").findAllSortedAsync("date2")
+
+        } else {
+
+            datas = realm.where(Money::class.java).equalTo("date1", "$nowY/$nowM/$nowTempD").findAllSortedAsync("date2")
+
+        }
+
         adapter.setData(datas)
 
-        datas.addChangeListener({ money ->
-            Dlog.w("money : " + money)
+        val perDayMoney = PreferenceManager.getDefaultSharedPreferences(this)
+                .getString(PER_DAY_MONEY, null)
 
-            if(datas.size == 0) {
+        if(null == perDayMoney) {
 
-                tvActivityMainDefault.visibility = View.VISIBLE
+            tvActivityMainOneDayMoney.text = "하루살이"
+            tvActivityMainRemainMoneyExplain.text = "하루 동안 살\n금액을 입력해 주세요"
+            tvActivityMainRemainMoney.visibility = View.GONE
 
-            } else {
+        } else {
 
-                tvActivityMainDefault.visibility = View.GONE
+            tvActivityMainRemainMoneyExplain.text = "남은 금액"
+            tvActivityMainOneDayMoney.text = "하루 $perDayMoney 살기"
 
-            }
+            datas.addChangeListener({ money ->
+                Dlog.w("size : " + datas.size + " , money : " + money)
 
-            adapter.notifyDataSetChanged() // UI를 갱신합니다.
-        })
+                var remainMoney = perDayMoney.toInt()
+
+                if(datas.size == 0) {
+
+                    tvActivityMainDefault.visibility = View.VISIBLE
+                    tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
+                    tvActivityMainRemainMoney.visibility = View.VISIBLE
+
+                } else {
+
+                    tvActivityMainDefault.visibility = View.GONE
+
+                    for(money in datas) {
+
+                        remainMoney -= money.money!!.toInt()
+                    }
+
+                    tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
+                    tvActivityMainRemainMoney.visibility = View.VISIBLE
+
+                }
+
+                adapter.notifyDataSetChanged() // UI를 갱신합니다.
+            })
+
+        }
+
+
+
 
     }
+
 
     private fun initButton() {
 
@@ -119,19 +171,14 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
             startActivity(Intent(this@MainActivity, CalendarActivity::class.java))
         }
 
+        /**
+         *  1 -> 하루 금액 입력
+         *  2 -> 가계부 내역 입력
+         */
+
         cvActivityMainLeftMoney.setOnClickListener {
             startActivityForResult(Intent(this@MainActivity, AddMoneyActivity::class.java)
                     .putExtra("type", 1), REQUEST_CODE)
-        }
-
-        rlActivityMainCharacter.setOnClickListener {
-            if(dialogMessage == null) {
-                MainMessageDialog(this).show()
-            } else {
-                MainMessageDialog(this, dialogMessage).show()
-                dialogMessage = null
-            }
-
         }
 
         fabActivityMain.setOnClickListener {
@@ -141,7 +188,7 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
             if(null != perDayMoney) {
 
                 startActivityForResult(Intent(this@MainActivity, AddMoneyActivity::class.java)
-                        .putExtra("type", 2), REQUEST_CODE)
+                        .putExtra("type", 2).putExtra("perDay", perDay), REQUEST_CODE)
 
             } else {
 
@@ -151,83 +198,33 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
         }
 
+        // TODO
+        // 전날 다음날 이동
         ivActivityMainNext.setOnClickListener {
             perDay++
-
-            initViewNext()
-        }
-
-        ivActivityMainBefore.setOnClickListener {
-            perDay--
-
-            rvActivityMain.visibility = View.VISIBLE
-            tvActivityMainDefault.visibility = View.GONE
-
-            dialogMessage = "오늘 치킨 사먹어서 과소비 했어요 ㅜㅠ \n님들은 그러지 마세요"
 
             initView()
         }
 
-    }
+        ivActivityMainBefore.setOnClickListener {
+            if(perDay > 1) {
 
-    private fun initPerMoney() {
+                perDay--
 
-        val perDayMoney = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString(PER_DAY_MONEY, null)
+                initView()
 
-        perDay = 1
-        tvActivityMainTitle.text = "$perDay 일차"
-
-        if(null == perDayMoney) {
-
-            tvActivityMainOneDayMoney.text = "하루살이"
-            tvActivityMainRemainMoneyExplain.text = "하루 동안 살\n금액을 입력해 주세요"
-            ivActivityMainCharacter.setImageResource(R.drawable.ic_tag_faces_white_24dp)
-            tvActivityMainRemainMoney.visibility = View.GONE
-
-        } else {
-
-            tvActivityMainOneDayMoney.text = "하루 $perDayMoney 살기"
-
-            tvActivityMainRemainMoneyExplain.text = "남은 금액"
-
-            var remainMoney = perDayMoney.toInt()
-            for(money in  datas) {
-
-                remainMoney -= money.money.toInt()
-            }
-
-            tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
-
-            tvActivityMainRemainMoney.visibility = View.VISIBLE
-
-            if(remainMoney <= -30000) {
-                ivActivityMainCharacter.setImageResource(R.drawable.ic_mood_bad_white_24dp)
-            } else if(remainMoney < 0 && remainMoney > -30000) {
-                ivActivityMainCharacter.setImageResource(R.drawable.ic_face_white_24dp)
             } else {
-                ivActivityMainCharacter.setImageResource(R.drawable.ic_tag_faces_white_24dp)
+
+                showToast("perDay == 1")
+
             }
+
         }
 
     }
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun initViewNext() {
-
-        val perDayMoney = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString(PER_DAY_MONEY, null)
-
-        tvActivityMainTitle.text = "$perDay 일차"
-
-        var remainMoney = perDayMoney.toInt()
-        tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
-        rvActivityMain.visibility = View.GONE
-        tvActivityMainDefault.visibility = View.VISIBLE
-
     }
 
 }

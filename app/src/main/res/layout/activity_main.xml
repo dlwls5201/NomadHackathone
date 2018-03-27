@@ -122,51 +122,6 @@
 
         </RelativeLayout>
 
-        <RelativeLayout
-            android:layout_marginTop="5dp"
-            android:layout_width="match_parent"
-            android:layout_height="40dp">
-
-            <LinearLayout
-                android:gravity="center_vertical"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:orientation="horizontal"
-                android:layout_width="match_parent"
-                android:layout_height="40dp">
-
-                <View
-                    android:layout_width="wrap_content"
-                    android:layout_height="20dp"
-                    android:layout_weight="1"
-                    android:background="@color/red_two" />
-
-                <View
-                    android:background="@color/green_two"
-                    android:layout_weight="1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="20dp"/>
-
-            </LinearLayout>
-
-            <RelativeLayout
-                android:id="@+id/rlActivityMainCharacter"
-                android:layout_centerHorizontal="true"
-                android:background="?android:attr/selectableItemBackground"
-                android:layout_width="48dp"
-                android:layout_height="match_parent">
-
-                <ImageView
-                    android:id="@+id/ivActivityMainCharacter"
-                    android:src="@drawable/ic_tag_faces_white_24dp"
-                    android:layout_centerInParent="true"
-                    android:layout_width="40dp"
-                    android:layout_height="50dp" />
-
-            </RelativeLayout>
-
-        </RelativeLayout>
-
     </LinearLayout>
 
     <RelativeLayout
