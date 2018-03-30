@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:calendarNS="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -26,10 +26,11 @@
 
     </RelativeLayout>
 
-    <CalendarView
+    <com.example.leejinseong.nomadhackathone.view.MyCalendarView
         android:id="@+id/cvActivityCalendar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        calendarNS:dateFormat="yyyy MMMM"/>
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rvActivityCalendar"

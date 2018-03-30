@@ -8,27 +8,24 @@ import android.view.View
 import com.example.leejinseong.nomadhackathone.Dlog
 import com.example.leejinseong.nomadhackathone.R
 import com.example.leejinseong.nomadhackathone.model.Money
+import com.example.leejinseong.nomadhackathone.view.MyCalendarView
 
 import java.text.SimpleDateFormat
-import java.util.Date
 
 import io.realm.Realm
 import kotlinx.android.synthetic.main.activity_calendar.*
-import android.widget.CalendarView.OnDateChangeListener
-import com.example.leejinseong.nomadhackathone.ui.main.MainAdapter
-import io.realm.RealmResults
-import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
 
 /**
  * Created by leejinseong on 2018. 3. 18..
  */
 
-class CalendarActivity : AppCompatActivity() , CalendarAdapter.ItemClickListener {
+class CalendarActivity : AppCompatActivity() {
 
     internal val realm by lazy { Realm.getDefaultInstance() }
 
-    internal val adapter by lazy { CalendarAdapter().apply { setItemClickListener(this@CalendarActivity) } }
+    internal val adapter by lazy { CalendarAdapter() }
 
     internal val datas by lazy {
 
@@ -47,6 +44,8 @@ class CalendarActivity : AppCompatActivity() , CalendarAdapter.ItemClickListener
 
         initView()
         initButton()
+
+        Dlog.d("Date : " + Date())
 
     }
 
@@ -79,41 +78,46 @@ class CalendarActivity : AppCompatActivity() , CalendarAdapter.ItemClickListener
 
         adapter.setData(array)
 
-        cvActivityCalendar.setOnDateChangeListener(OnDateChangeListener {
-            arg0, year, month, date ->
+        val events = HashSet<Date>()
+        events.add(Date())
+        //Dlog.d("events : $events")
 
-            var nowTime : String?
+        with(cvActivityCalendar) {
+            updateCalendar(events)
 
-            val month = month + 1
+            setEventHandler(object : MyCalendarView.EventHandler {
 
-            if(month < 10) {
+                override fun onDayPress(date: Date?, view: View) {
+                    // show returned day
+                    val df = SimpleDateFormat("yyyy/MM/dd")
 
-                nowTime = "$year/0$month/$date"
+                    val nowTime = df.format(date);
 
-            } else {
+                    val calendarDatas = realm.where(Money::class.java).equalTo("date1", nowTime).findAllSortedAsync("date2")
 
-                nowTime = "$year/$month/$date"
+                    Dlog.w("nowTime : $nowTime")
+                    Dlog.w("calendarDatas : $calendarDatas")
 
-            }
+                    val array: ArrayList<Money> = ArrayList()
 
-            //Dlog.w("nowTime : $nowTime")
+                    for(item in calendarDatas) {
+                        array.add(item)
+                    }
 
-            val calendarDatas = realm.where(Money::class.java).equalTo("date1", nowTime).findAllSortedAsync("date2")
-            //Dlog.w("calendarDatas : $datas")
+                    adapter.setData(array)
 
-            val array: ArrayList<Money> = ArrayList()
+                }
 
-            for(item in calendarDatas) {
-                array.add(item)
-            }
+                override fun onDayLongPress(date: Date) {
+                    // show returned day
+                    val df = SimpleDateFormat.getDateInstance()
 
-            adapter.setData(array)
+                    Dlog.i("onDayLongPress : " + df.format(date))
 
-        })
+                }
+            })
+        }
 
     }
 
-    override fun onItemClick() {
-        Dlog.w("onItemClick")
-    }
 }

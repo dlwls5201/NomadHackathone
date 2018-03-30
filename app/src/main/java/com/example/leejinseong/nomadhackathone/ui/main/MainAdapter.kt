@@ -23,7 +23,6 @@ class MainAdapter : RecyclerView.Adapter<MainAdapter.MoneyHolder>() {
     fun setItemClickListener(listener: ItemClickListener?) {
         this.listener = listener
     }
-
     fun setData(datas: RealmResults<Money>) {
         this.datas = datas
         notifyDataSetChanged()

@@ -15,12 +15,6 @@ class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
 
     private var datas: ArrayList<Money>? = null
 
-    private var listener: ItemClickListener? = null
-
-    fun setItemClickListener(listener: ItemClickListener?) {
-        this.listener = listener
-    }
-
     fun setData(datas: ArrayList<Money>) {
         this.datas = datas
         notifyDataSetChanged()
@@ -37,7 +31,7 @@ class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
         with(holder) {
 
             tvMoneyItemTitle.text = item?.money + "원 사용"
-            itemView.setOnClickListener { listener?.onItemClick() }
+            //itemView.setOnClickListener { listener?.onItemClick() }
 
         }
 
@@ -58,10 +52,5 @@ class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
         }
     }
 
-    interface ItemClickListener {
-
-        fun onItemClick()
-
-    }
 
 }
