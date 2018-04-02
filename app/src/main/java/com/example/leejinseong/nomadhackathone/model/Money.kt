@@ -10,7 +10,7 @@ import io.realm.annotations.Required
 open class Money : RealmObject() {
 
     @Required
-    var money: String? = null
+    var money: Int? = null
 
     @Required
     var date1: String? = null //yyyy/MM/dd

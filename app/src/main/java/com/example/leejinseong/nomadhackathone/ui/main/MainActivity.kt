@@ -5,12 +5,14 @@ import android.graphics.Color
 import android.graphics.Movie
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.preference.Preference
 import android.preference.PreferenceManager
 import android.support.v7.widget.LinearLayoutManager
 import android.view.View
 import android.widget.Toast
 import com.example.leejinseong.nomadhackathone.Dlog
 import com.example.leejinseong.nomadhackathone.R
+import com.example.leejinseong.nomadhackathone.helper.PrefHelper
 import com.example.leejinseong.nomadhackathone.model.Money
 import com.example.leejinseong.nomadhackathone.ui.AddMoneyActivity
 import com.example.leejinseong.nomadhackathone.ui.calendar.CalendarActivity
@@ -25,34 +27,22 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
     companion object {
 
-        val PER_DAY_MONEY = "per_day_money"
-
         val REQUEST_CODE = 100
         val RESULT_CODE = 101
 
-    }
-
-    val now = System.currentTimeMillis()
-    val date = Date(now)
-
-    val sdfY = SimpleDateFormat("yyyy")
-    val nowY = sdfY.format(date)
-
-    val sdfM = SimpleDateFormat("MM")
-    val nowM = sdfM.format(date)
-
-    val sdfD = SimpleDateFormat("dd")
-    val nowD = sdfD.format(date)
-
-    internal val adapter by lazy {
-        MainAdapter().apply { setItemClickListener(this@MainActivity) }
     }
 
     internal val realm by lazy {
         Realm.getDefaultInstance()
     }
 
-    internal var perDay = 1
+    internal val pref by lazy {
+        PrefHelper.getInstanceOf(this)
+    }
+
+    internal val adapter by lazy {
+        MainAdapter().apply { setItemClickListener(this@MainActivity) }
+    }
 
     internal lateinit var datas : RealmResults<Money>
 
@@ -68,13 +58,13 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
     override fun onDestroy() {
         super.onDestroy()
 
-        datas.removeAllChangeListeners()
+        datas?.removeAllChangeListeners()
         realm.close()
 
     }
 
-    override fun onItemClick() {
-        showToast("itemClick")
+    override fun onItemClick(money: Money?) {
+        MainDialog(this, money).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -89,36 +79,35 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
         ivActivityMainCalendar.setColorFilter(Color.parseColor("#ffffff"))
 
-        tvActivityMainTitle.text = "$perDay 일 차"
-
         with(rvActivityMain) {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = this@MainActivity.adapter
         }
 
-        var nowTempD = nowD.toInt()
+        val perDay = pref.getValue(PrefHelper.PER_DAY, 1)
 
-        Dlog.d("initView perDay : " + perDay + " , nowTempD : " + nowTempD)
+        tvActivityMainTitle.text = "$perDay 일 차"
 
-        if(perDay > 1) {
+        val calendar = Calendar.getInstance();
 
-            nowTempD += (perDay - 1)
-
-            datas.removeAllChangeListeners()
-            datas = realm.where(Money::class.java).equalTo("date1", "$nowY/$nowM/$nowTempD").findAllSortedAsync("date2")
-
-        } else {
-
-            datas = realm.where(Money::class.java).equalTo("date1", "$nowY/$nowM/$nowTempD").findAllSortedAsync("date2")
-
+        if(perDay != 1) {
+            val date = calendar.get(Calendar.DATE) + (perDay-1)
+            calendar.set(Calendar.DATE, date)
         }
+
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val day = calendar.get(Calendar.DATE)
+
+        Dlog.d("initView : $year/$month/$day")
+
+        datas = realm.where(Money::class.java).equalTo("date1", "$year/$month/$day").findAllSortedAsync("date2")
 
         adapter.setData(datas)
 
-        val perDayMoney = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString(PER_DAY_MONEY, null)
+        val perDayMoney = pref.getValue(PrefHelper.PER_DAY_MONEY, -1)
 
-        if(null == perDayMoney) {
+        if(perDayMoney == -1) {
 
             tvActivityMainOneDayMoney.text = "하루살이"
             tvActivityMainRemainMoneyExplain.text = "하루 동안 살\n금액을 입력해 주세요"
@@ -129,27 +118,28 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
             tvActivityMainRemainMoneyExplain.text = "남은 금액"
             tvActivityMainOneDayMoney.text = "하루 $perDayMoney 살기"
 
+            datas.removeAllChangeListeners()
             datas.addChangeListener({ money ->
                 Dlog.w("size : " + datas.size + " , money : " + money)
-
-                var remainMoney = perDayMoney.toInt()
 
                 if(datas.size == 0) {
 
                     tvActivityMainDefault.visibility = View.VISIBLE
-                    tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
+                    tvActivityMainRemainMoney.text = perDayMoney.toString() + "원"
                     tvActivityMainRemainMoney.visibility = View.VISIBLE
 
                 } else {
 
                     tvActivityMainDefault.visibility = View.GONE
 
+                    var tempPerDayMoney = perDayMoney
+
                     for(money in datas) {
 
-                        remainMoney -= money.money!!.toInt()
+                        tempPerDayMoney -= money.money!!
                     }
 
-                    tvActivityMainRemainMoney.text = remainMoney.toString() + "원"
+                    tvActivityMainRemainMoney.text = tempPerDayMoney.toString() + "원"
                     tvActivityMainRemainMoney.visibility = View.VISIBLE
 
                 }
@@ -183,33 +173,35 @@ class MainActivity : AppCompatActivity() , MainAdapter.ItemClickListener {
 
         fabActivityMain.setOnClickListener {
 
-            val perDayMoney = PreferenceManager.getDefaultSharedPreferences(this).getString(PER_DAY_MONEY, null)
+            val perDayMoney = pref.getValue(PrefHelper.PER_DAY_MONEY, -1)
 
-            if(null != perDayMoney) {
+            if(perDayMoney == -1) {
 
-                startActivityForResult(Intent(this@MainActivity, AddMoneyActivity::class.java)
-                        .putExtra("type", 2).putExtra("perDay", perDay), REQUEST_CODE)
+                showToast("하루 금액을 먼저 입력해 주세요")
 
             } else {
 
-                showToast("하루 금액을 먼저 입력해 주세요")
+                startActivityForResult(Intent(this@MainActivity, AddMoneyActivity::class.java)
+                        .putExtra("type", 2), REQUEST_CODE)
 
             }
 
         }
 
-        // TODO
         // 전날 다음날 이동
         ivActivityMainNext.setOnClickListener {
-            perDay++
+            var perDay = pref.getValue(PrefHelper.PER_DAY, 1)
+            pref.put(PrefHelper.PER_DAY, (perDay + 1))
 
             initView()
         }
 
         ivActivityMainBefore.setOnClickListener {
+            var perDay = pref.getValue(PrefHelper.PER_DAY, 1)
+
             if(perDay > 1) {
 
-                perDay--
+                pref.put(PrefHelper.PER_DAY, (perDay - 1))
 
                 initView()
 

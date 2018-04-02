@@ -7,6 +7,7 @@ import android.graphics.Typeface;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +21,7 @@ import android.widget.TextView;
 
 import com.example.leejinseong.nomadhackathone.Dlog;
 import com.example.leejinseong.nomadhackathone.R;
+import com.example.leejinseong.nomadhackathone.helper.PrefHelper;
 import com.example.leejinseong.nomadhackathone.model.Money;
 import com.example.leejinseong.nomadhackathone.ui.main.MainActivity;
 
@@ -247,8 +249,6 @@ public class MyCalendarView extends LinearLayout
         // realm
         private Realm realm;
 
-        // perDayMoney
-        private String perDayMoney;
 
         public CalendarAdapter(Context context, ArrayList<Date> days, HashSet<Date> eventDays)
         {
@@ -257,8 +257,6 @@ public class MyCalendarView extends LinearLayout
             inflater = LayoutInflater.from(context);
             realm = Realm.getDefaultInstance();
 
-            perDayMoney = PreferenceManager.getDefaultSharedPreferences(context)
-                    .getString("per_day_money", null);
         }
 
         @Override
@@ -304,10 +302,12 @@ public class MyCalendarView extends LinearLayout
                 // if this day is outside current month, grey it out
                 tvItemViewCalendar.setTextColor(getResources().getColor(R.color.greyed_out));
             }
-            else if (day == today.getDate())
+            //else if (day == today.getDate())
+            else if (day == (today.getDate() + PrefHelper.getInstanceOf(getContext()).getValue(PrefHelper.PER_DAY, 1) - 1))
             {
                 // if it is today, set it to blue/bold
                 tvItemViewCalendar.setTypeface(null, Typeface.BOLD);
+                tvItemViewCalendar.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
                 tvItemViewCalendar.setTextColor(getResources().getColor(R.color.today));
 
                 rlItemViewCalendar.setBackgroundColor(getResources().getColor(R.color.darkOrange));
@@ -318,11 +318,11 @@ public class MyCalendarView extends LinearLayout
 
             // realm data setting
             String nowYear = String.valueOf(year+1900);
-            String nowMonth = (month+1) < 10 ? "0" + String.valueOf(month+1) : String.valueOf(month+1);
+            String nowMonth = String.valueOf(month+1);
 
             String nowTime = nowYear + "/" + nowMonth + "/" +String.valueOf(day);
 
-            RealmResults<Money> datas = realm.where(Money.class).equalTo("date1", nowTime).findAllSortedAsync("date2");
+            final RealmResults<Money> datas = realm.where(Money.class).equalTo("date1", nowTime).findAllSortedAsync("date2");
 
             if(datas.toString().equals("[]")) {
 
@@ -330,34 +330,40 @@ public class MyCalendarView extends LinearLayout
 
             } else {
 
-                datas.addChangeListener(new RealmChangeListener<RealmResults<Money>>() {
-                    @Override
-                    public void onChange(RealmResults<Money> monies) {
-                        //Dlog.i("perDayMoney : " + perDayMoney + " , monies : " + monies + " , size : " + monies.size());
+                final int perDayMoney = PrefHelper.getInstanceOf(getContext()).getValue(PrefHelper.PER_DAY_MONEY, -1);
 
-                        if(!TextUtils.isEmpty(perDayMoney)) {
+                if(perDayMoney != -1) {
 
-                            int halfPerDayMoney = Integer.parseInt(perDayMoney) / 2;
-                            int intPerDayMoney = Integer.parseInt(perDayMoney);
+                    final int halfPerDayMoney = perDayMoney / 2;
+
+                    datas.addChangeListener(new RealmChangeListener<RealmResults<Money>>() {
+                        @Override
+                        public void onChange(RealmResults<Money> monies) {
+
+                            int tempPerDayMoney = PrefHelper.getInstanceOf(getContext()).getValue(PrefHelper.PER_DAY_MONEY, -1);
 
                             for(int i = 0; i < monies.size(); i++) {
                                 Money money = monies.get(i);
-                                intPerDayMoney -= Integer.parseInt(money.getMoney());
+                                tempPerDayMoney -= money.getMoney();
+                                Dlog.w("getMoney -= " + money.getMoney());
                             }
 
-                            //Dlog.e("intPerDayMoney : " + intPerDayMoney);
+                            Dlog.e("----- tempPerDayMoney : " + tempPerDayMoney);
 
-                            if(intPerDayMoney < 0) {
+                            if(tempPerDayMoney < 0) {
                                 rlItemViewCalendar.setBackgroundColor(getResources().getColor(R.color.warmPink));
-                            } else if(intPerDayMoney > 0 && intPerDayMoney < halfPerDayMoney) {
-                                rlItemViewCalendar.setBackgroundColor(getResources().getColor(R.color.yellowOrange));
-                            } else {
+                            } else if(tempPerDayMoney > 0 && tempPerDayMoney <= halfPerDayMoney) {
+                                rlItemViewCalendar.setBackgroundColor(getResources().getColor(R.color.warmYellow));
+                            } else  {
                                 rlItemViewCalendar.setBackgroundColor(getResources().getColor(R.color.warmBlue));
                             }
 
+                            datas.removeAllChangeListeners();
+
                         }
-                    }
-                });
+                    });
+
+                }
 
             }
 

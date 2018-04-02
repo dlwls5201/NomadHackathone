@@ -38,8 +38,8 @@ class MainAdapter : RecyclerView.Adapter<MainAdapter.MoneyHolder>() {
 
         with(holder) {
 
-            tvMoneyItemTitle.text = item?.money + "원 사용"
-            itemView.setOnClickListener { listener?.onItemClick() }
+            tvMoneyItemTitle.text = "${item?.money}원 사용"
+            itemView.setOnClickListener { listener?.onItemClick(item) }
 
         }
 
@@ -64,7 +64,7 @@ class MainAdapter : RecyclerView.Adapter<MainAdapter.MoneyHolder>() {
 
     interface ItemClickListener {
 
-        fun onItemClick()
+        fun onItemClick(money: Money?)
 
     }
 

@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.example.leejinseong.nomadhackathone.R
 import com.example.leejinseong.nomadhackathone.model.Money
+import com.example.leejinseong.nomadhackathone.ui.main.MainAdapter
 import io.realm.RealmResults
 
 /**
@@ -13,9 +14,14 @@ import io.realm.RealmResults
  */
 class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
 
-    private var datas: ArrayList<Money>? = null
+    private var datas: RealmResults<Money>? = null
 
-    fun setData(datas: ArrayList<Money>) {
+    private var listener: ItemClickListener? = null
+
+    fun setItemClickListener(listener: ItemClickListener?) {
+        this.listener = listener
+    }
+    fun setData(datas: RealmResults<Money>) {
         this.datas = datas
         notifyDataSetChanged()
     }
@@ -30,8 +36,8 @@ class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
 
         with(holder) {
 
-            tvMoneyItemTitle.text = item?.money + "원 사용"
-            //itemView.setOnClickListener { listener?.onItemClick() }
+            tvMoneyItemTitle.text = "${item?.money}원 사용"
+            itemView.setOnClickListener { listener?.onItemClick() }
 
         }
 
@@ -52,5 +58,10 @@ class CalendarAdapter : RecyclerView.Adapter<CalendarAdapter.MoneyHolder>() {
         }
     }
 
+    interface ItemClickListener {
+
+        fun onItemClick()
+
+    }
 
 }
